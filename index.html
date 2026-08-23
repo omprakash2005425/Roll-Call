@@ -195,4 +195,606 @@
     max-height:78vh; display:flex; flex-direction:column; padding-bottom:calc(16px + var(--safe-b));
     animation:slideup .18s ease-out;
   }
-  @keyframes slideup{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0);
+  @keyframes slideup{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .modal .mhead{
+    display:flex; align-items:center; justify-content:space-between; padding:16px 18px 8px;
+  }
+  .modal .mhead h3{margin:0; font-family:'Zilla Slab',serif; font-size:18px;}
+  .modal .mhead button{font-size:20px; color:var(--ink-soft); padding:4px 8px;}
+  .modal .mlist{overflow-y:auto; padding:6px 18px 10px;}
+  .hist-row{
+    display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .hist-row .d{font-size:14px;}
+  .hist-row .right{display:flex; align-items:center; gap:10px;}
+  .hist-empty{text-align:center; color:var(--ink-soft); padding:30px 0; font-size:13.5px;}
+
+  /* Insights tab */
+  .insight-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px;}
+  .insight-card h4{margin:0 0 12px; font-family:'Zilla Slab',serif; font-size:15px;}
+  .donut-wrap{display:flex; align-items:center; gap:20px;}
+  .donut-wrap svg{width:120px; height:120px; flex:none;}
+  .donut-legend{flex:1;}
+  .legend-row{display:flex; align-items:center; gap:8px; font-size:13.5px; margin-bottom:8px;}
+  .legend-row .dot{width:10px; height:10px; border-radius:3px; flex:none;}
+  .legend-row .num{margin-left:auto; font-family:'IBM Plex Mono',monospace; font-weight:600;}
+  .bar-row{margin-bottom:14px;}
+  .bar-row:last-child{margin-bottom:0;}
+  .bar-row .bhead{display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;}
+  .bar-row .bhead .bname{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%;}
+  .bar-row .bhead .bpct{font-family:'IBM Plex Mono',monospace; color:var(--ink-soft);}
+  .bar-track{height:9px; border-radius:6px; background:var(--paper-line); overflow:hidden; display:flex;}
+  .bar-fill.present{background:var(--present); height:100%;}
+  .bar-fill.absent{background:var(--absent); height:100%;}
+  .heatstrip{display:grid; grid-template-columns:repeat(14, 1fr); gap:5px;}
+  .heat-cell{aspect-ratio:1; border-radius:5px; background:var(--paper-line);}
+  .heat-cell.full{background:var(--present);}
+  .heat-cell.partial{background:var(--margin);}
+  .heat-cell.none{background:var(--absent);}
+  .heat-labels{display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink-faint); margin-top:6px;}
+  .streak-row{display:flex; gap:10px;}
+  .streak-box{flex:1; background:var(--paper); border-radius:12px; padding:12px; text-align:center;}
+  .streak-box .num{font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600;}
+  .streak-box .lbl{font-size:11px; color:var(--ink-soft); margin-top:2px;}
+  .data-actions{display:flex; gap:10px;}
+  .data-btn{
+    flex:1; padding:12px 0; border-radius:10px; font-weight:600; font-size:13.5px;
+    border:1.5px solid var(--line); text-align:center;
+  }
+  .data-btn:active{background:var(--paper);}
+  .data-btn.danger{color:var(--absent); border-color:var(--absent-bg);}
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(96px + var(--safe-b)); transform:translateX(-50%);
+    background:var(--ink); color:var(--paper); padding:9px 16px; border-radius:20px; font-size:13px;
+    z-index:60; opacity:0; pointer-events:none; transition:opacity .18s ease, transform .18s ease;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div>
+      <h1 class="display">Roll Call</h1>
+      <div class="sub">your attendance, kept honest</div>
+    </div>
+  </div>
+  <div class="overall" id="overallBox"></div>
+</header>
+
+<main id="view"></main>
+
+<nav class="tabbar">
+  <button id="tabToday" class="active"><span class="ic">✓</span>Today</button>
+  <button id="tabInsights"><span class="ic">📊</span>Insights</button>
+  <button id="tabSubjects"><span class="ic">✎</span>Subjects</button>
+</nav>
+<input type="file" id="importFile" accept="application/json" style="display:none;">
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="mhead">
+      <h3 id="modalTitle" class="display">History</h3>
+      <button id="modalClose">✕</button>
+    </div>
+    <div class="mlist" id="modalList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var STORAGE_KEY = 'rollcall_v1';
+  var state = loadState();
+  var currentTab = 'today';
+  var selectedDate = todayStr();
+  var hideBanner = localStorage.getItem('rollcall_hide_banner') === '1';
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return { subjects: [], records: {} };
+      var parsed = JSON.parse(raw);
+      if(!parsed.subjects) parsed.subjects = [];
+      if(!parsed.records) parsed.records = {};
+      return parsed;
+    }catch(e){ return { subjects: [], records: {} }; }
+  }
+  function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function todayStr(){ return fmt(new Date()); }
+  function fmt(d){
+    var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+day;
+  }
+  function prettyDate(str){
+    var d = new Date(str+'T00:00:00');
+    return d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  }
+  function addDays(str, n){
+    var d = new Date(str+'T00:00:00'); d.setDate(d.getDate()+n); return fmt(d);
+  }
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+  }
+
+  function subjectStats(subj){
+    var rec = state.records[subj.id] || {};
+    var dates = Object.keys(rec);
+    var total = dates.length;
+    var present = dates.filter(function(d){ return rec[d]==='present'; }).length;
+    var pct = total ? (present/total*100) : null;
+    var target = (subj.target || 75) / 100;
+    var advice = null;
+    if(total > 0){
+      var p = present, t = total, r = target;
+      if(p/t >= r){
+        var bunkable = Math.floor((p - r*t) / r);
+        if(bunkable < 0) bunkable = 0;
+        advice = bunkable > 0 ? ('can miss ' + bunkable + ' more') : 'right at the line';
+      } else {
+        var need = Math.ceil((r*t - p) / (1 - r));
+        advice = 'attend next ' + need + ' to hit ' + (subj.target||75) + '%';
+      }
+    }
+    return { total: total, present: present, pct: pct, advice: advice, target: subj.target||75 };
+  }
+
+  function stampSVG(pct, size, seedStr){
+    var r = size/2 - 4;
+    var c = size/2;
+    var circumference = 2 * Math.PI * r;
+    var pctSafe = pct===null ? 0 : pct;
+    var offset = circumference * (1 - pctSafe/100);
+    var color = pct===null ? 'var(--ink-faint)' : (pctSafe >= 75 ? 'var(--present)' : (pctSafe >= 60 ? 'var(--margin)' : 'var(--absent)'));
+    var seed = 0;
+    for(var i=0;i<seedStr.length;i++) seed += seedStr.charCodeAt(i);
+    var rot = (seed % 7) - 3;
+    return '<div class="stampmark" style="transform:rotate('+rot+'deg)">' +
+      '<svg viewBox="0 0 '+size+' '+size+'">' +
+        '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="var(--line)" stroke-width="3"/>' +
+        '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="3" ' +
+          'stroke-dasharray="'+circumference+'" stroke-dashoffset="'+offset+'" stroke-linecap="round" ' +
+          'transform="rotate(-90 '+c+' '+c+')"/>' +
+      '</svg>' +
+      '<div class="pct" style="color:'+color+'">'+(pct===null ? '—' : Math.round(pct)+'%')+'</div>' +
+    '</div>';
+  }
+
+  function renderOverall(){
+    var subs = state.subjects;
+    var totalAll=0, presentAll=0, below=0;
+    subs.forEach(function(s){
+      var st = subjectStats(s);
+      totalAll += st.total; presentAll += st.present;
+      if(st.pct !== null && st.pct < (s.target||75)) below++;
+    });
+    var pct = totalAll ? Math.round(presentAll/totalAll*100) : null;
+    var box = document.getElementById('overallBox');
+    if(subs.length===0){
+      box.innerHTML = '<div class="stat-text"><div class="stat-num">Add your subjects</div>' +
+        '<div class="stat-label">to start tracking attendance</div></div>';
+      return;
+    }
+    box.innerHTML =
+      stampSVG(pct, 52, 'overall') +
+      '<div class="stat-text">' +
+        '<div class="stat-num">' + (pct===null ? 'No classes logged yet' : pct + '% overall') + '</div>' +
+        '<div class="stat-label">' + subs.length + ' subject' + (subs.length===1?'':'s') +
+          (below>0 ? ' · ' + below + ' below target' : (totalAll>0 ? ' · all on target' : '')) +
+        '</div>' +
+      '</div>';
+  }
+
+  function renderToday(){
+    var v = document.getElementById('view');
+    var isToday = selectedDate === todayStr();
+    var html = '';
+
+    if(!hideBanner){
+      html += '<div class="banner" id="banner">' +
+        '<button class="x" id="bannerX">✕</button>' +
+        '<b>Add Roll Call to your Home Screen</b>' +
+        '<ol><li>Open this page in Safari</li><li>Tap the Share icon</li>' +
+        '<li>Choose "Add to Home Screen"</li></ol>' +
+      '</div>';
+    }
+
+    html += '<div class="datebar' + (isToday?' is-today':'') + '">' +
+      '<button class="arrow" id="prevDay">‹</button>' +
+      '<div class="datelabel">' + prettyDate(selectedDate) + '<span class="today-pill">Today</span></div>' +
+      '<div class="calwrap"><button class="arrow" id="calBtn">📅</button>' +
+        '<input type="date" id="dateInput" value="'+selectedDate+'"></div>' +
+      '<button class="arrow" id="nextDay" '+(isToday?'style="visibility:hidden"':'')+'>›</button>' +
+    '</div>';
+
+    if(state.subjects.length === 0){
+      html += '<div class="empty">' + stampSVG(null,64,'empty') +
+        '<div style="margin-top:10px;">No subjects yet.<br>Head to the Subjects tab to add your first one.</div>' +
+        '<button class="go" id="goSubjects">Add a subject</button>' +
+      '</div>';
+      v.innerHTML = html;
+      bindTodayEvents();
+      return;
+    }
+
+    html += '<div class="section-label">Mark attendance</div>';
+    state.subjects.forEach(function(s){
+      var st = subjectStats(s);
+      var rec = state.records[s.id] || {};
+      var status = rec[selectedDate];
+      var badgeClass = st.pct===null ? 'neutral' : (st.pct >= (s.target||75) ? 'ok' : (st.pct >= (s.target||75)-15 ? 'warn' : 'bad'));
+      html += '<div class="card subject-row" data-id="'+s.id+'">' +
+        '<div class="row1">' +
+          '<button class="stampbtn" data-hist="'+s.id+'">' + stampSVG(st.pct, 52, s.id) + '</button>' +
+          '<div class="namewrap"><div class="name">'+escapeHtml(s.name)+'</div>' +
+            '<div class="frac mono">' + st.present + '/' + st.total + ' classes' + '</div></div>' +
+          '<span class="badge '+badgeClass+'">' + (st.advice || 'no data yet') + '</span>' +
+        '</div>' +
+        '<div class="row2">' +
+          '<button class="markbtn present'+(status==='present'?' active':'')+'" data-mark="present" data-id="'+s.id+'">Present</button>' +
+          '<button class="markbtn absent'+(status==='absent'?' active':'')+'" data-mark="absent" data-id="'+s.id+'">Absent</button>' +
+        '</div>' +
+      '</div>';
+    });
+
+    v.innerHTML = html;
+    bindTodayEvents();
+  }
+
+  function bindTodayEvents(){
+    var b = document.getElementById('bannerX');
+    if(b) b.onclick = function(){ hideBanner = true; localStorage.setItem('rollcall_hide_banner','1'); render(); };
+
+    var go = document.getElementById('goSubjects');
+    if(go) go.onclick = function(){ currentTab='subjects'; render(); };
+
+    document.getElementById('prevDay').onclick = function(){ selectedDate = addDays(selectedDate,-1); render(); };
+    var nd = document.getElementById('nextDay');
+    if(nd) nd.onclick = function(){ selectedDate = addDays(selectedDate,1); render(); };
+    var di = document.getElementById('dateInput');
+    if(di) di.onchange = function(e){ selectedDate = e.target.value || todayStr(); render(); };
+
+    document.querySelectorAll('[data-mark]').forEach(function(btn){
+      btn.onclick = function(){
+        var id = btn.getAttribute('data-id');
+        var status = btn.getAttribute('data-mark');
+        if(!state.records[id]) state.records[id] = {};
+        if(state.records[id][selectedDate] === status){
+          delete state.records[id][selectedDate];
+        } else {
+          state.records[id][selectedDate] = status;
+        }
+        saveState();
+        render();
+      };
+    });
+
+    document.querySelectorAll('[data-hist]').forEach(function(btn){
+      btn.onclick = function(){ openHistory(btn.getAttribute('data-hist')); };
+    });
+  }
+
+  function renderSubjects(){
+    var v = document.getElementById('view');
+    var html = '<div class="section-label">Your subjects</div>';
+    if(state.subjects.length===0){
+      html += '<div class="empty" style="padding:24px 4px;">No subjects yet — add one below.</div>';
+    }
+    state.subjects.forEach(function(s){
+      html += '<div class="card subj-manage-row" data-id="'+s.id+'">' +
+        stampSVG(subjectStats(s).pct, 44, s.id) +
+        '<div style="flex:1; min-width:0;">' +
+          '<div class="name">'+escapeHtml(s.name)+'</div>' +
+          '<div class="target">target ' + (s.target||75) + '%</div>' +
+        '</div>' +
+        '<button class="iconbtn" data-edit="'+s.id+'">✎</button>' +
+        '<button class="iconbtn danger" data-del="'+s.id+'">🗑</button>' +
+      '</div>';
+    });
+
+    html += '<div class="section-label">Add a subject</div>' +
+      '<div class="addform">' +
+        '<div class="fields">' +
+          '<input type="text" id="newName" placeholder="Subject name" maxlength="40">' +
+          '<input type="number" id="newTarget" placeholder="Target %" value="75" min="0" max="100">' +
+        '</div>' +
+        '<button class="addbtn" id="addSubjBtn">Add subject</button>' +
+      '</div>';
+
+    v.innerHTML = html;
+
+    document.getElementById('addSubjBtn').onclick = function(){
+      var nameEl = document.getElementById('newName');
+      var targetEl = document.getElementById('newTarget');
+      var name = nameEl.value.trim();
+      if(!name){ toast('Give it a name first'); nameEl.focus(); return; }
+      var target = parseInt(targetEl.value,10);
+      if(isNaN(target) || target<0 || target>100) target = 75;
+      state.subjects.push({ id: uid(), name: name, target: target });
+      saveState();
+      toast('Added ' + name);
+      render();
+    };
+
+    document.querySelectorAll('[data-del]').forEach(function(btn){
+      btn.onclick = function(){
+        var id = btn.getAttribute('data-del');
+        var s = state.subjects.find(function(x){ return x.id===id; });
+        if(!s) return;
+        if(confirm('Delete "'+s.name+'" and all its attendance history? This cannot be undone.')){
+          state.subjects = state.subjects.filter(function(x){ return x.id!==id; });
+          delete state.records[id];
+          saveState();
+          render();
+        }
+      };
+    });
+
+    document.querySelectorAll('[data-edit]').forEach(function(btn){
+      btn.onclick = function(){
+        var id = btn.getAttribute('data-edit');
+        var s = state.subjects.find(function(x){ return x.id===id; });
+        if(!s) return;
+        var newName = prompt('Subject name', s.name);
+        if(newName===null) return;
+        newName = newName.trim();
+        if(newName) s.name = newName;
+        var newTarget = prompt('Target percentage (e.g. 75)', s.target||75);
+        if(newTarget!==null){
+          var tnum = parseInt(newTarget,10);
+          if(!isNaN(tnum) && tnum>=0 && tnum<=100) s.target = tnum;
+        }
+        saveState();
+        render();
+      };
+    });
+
+    document.querySelectorAll('[data-hist]').forEach(function(btn){
+      btn.onclick = function(){ openHistory(btn.getAttribute('data-hist')); };
+    });
+    document.querySelectorAll('.stampbtn').forEach(function(btn){
+      btn.onclick = function(){
+        var card = btn.closest('[data-id]');
+        if(card) openHistory(card.getAttribute('data-id'));
+      };
+    });
+  }
+
+  function openHistory(subjId){
+    var s = state.subjects.find(function(x){ return x.id===subjId; });
+    if(!s) return;
+    document.getElementById('modalTitle').textContent = s.name + ' — history';
+    var rec = state.records[subjId] || {};
+    var dates = Object.keys(rec).sort().reverse();
+    var list = document.getElementById('modalList');
+    if(dates.length===0){
+      list.innerHTML = '<div class="hist-empty">No classes logged yet.</div>';
+    } else {
+      list.innerHTML = dates.map(function(d){
+        var status = rec[d];
+        var badge = status==='present' ? '<span class="badge ok">Present</span>' : '<span class="badge bad">Absent</span>';
+        return '<div class="hist-row"><div class="d">' + prettyDate(d) + '</div>' +
+          '<div class="right">' + badge + '<button class="iconbtn danger" data-rmdate="'+d+'" data-rmid="'+subjId+'">✕</button></div></div>';
+      }).join('');
+      list.querySelectorAll('[data-rmdate]').forEach(function(btn){
+        btn.onclick = function(){
+          var d = btn.getAttribute('data-rmdate');
+          var id = btn.getAttribute('data-rmid');
+          delete state.records[id][d];
+          saveState();
+          openHistory(id);
+          render();
+        };
+      });
+    }
+    document.getElementById('modalOverlay').classList.remove('hidden');
+  }
+
+  document.getElementById('modalClose').onclick = function(){
+    document.getElementById('modalOverlay').classList.add('hidden');
+  };
+  document.getElementById('modalOverlay').addEventListener('click', function(e){
+    if(e.target.id==='modalOverlay') e.currentTarget.classList.add('hidden');
+  });
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function render(){
+    document.getElementById('tabToday').classList.toggle('active', currentTab==='today');
+    document.getElementById('tabInsights').classList.toggle('active', currentTab==='insights');
+    document.getElementById('tabSubjects').classList.toggle('active', currentTab==='subjects');
+    renderOverall();
+    if(currentTab==='today') renderToday();
+    else if(currentTab==='insights') renderInsights();
+    else renderSubjects();
+  }
+
+  document.getElementById('tabToday').onclick = function(){ currentTab='today'; render(); };
+  document.getElementById('tabInsights').onclick = function(){ currentTab='insights'; render(); };
+  document.getElementById('tabSubjects').onclick = function(){ currentTab='subjects'; render(); };
+
+  // ---------- Insights ----------
+  function renderInsights(){
+    var v = document.getElementById('view');
+    if(state.subjects.length===0){
+      v.innerHTML = '<div class="empty">' + stampSVG(null,64,'insights-empty') +
+        '<div style="margin-top:10px;">Nothing to chart yet.<br>Add a subject and mark a few days first.</div></div>';
+      return;
+    }
+
+    var totalP=0, totalA=0;
+    state.subjects.forEach(function(s){
+      var st = subjectStats(s);
+      totalP += st.present; totalA += st.total - st.present;
+    });
+    var totalAll = totalP + totalA;
+
+    var html = '';
+
+    // Donut: overall present vs absent
+    html += '<div class="insight-card"><h4>Present vs absent — overall</h4>';
+    if(totalAll===0){
+      html += '<div class="hist-empty">No classes logged yet.</div>';
+    } else {
+      html += '<div class="donut-wrap">' + donutSVG(totalP, totalA) +
+        '<div class="donut-legend">' +
+          '<div class="legend-row"><span class="dot" style="background:var(--present)"></span>Present<span class="num">'+totalP+'</span></div>' +
+          '<div class="legend-row"><span class="dot" style="background:var(--absent)"></span>Absent<span class="num">'+totalA+'</span></div>' +
+          '<div class="legend-row"><span class="dot" style="background:var(--line)"></span>Overall<span class="num">'+Math.round(totalP/totalAll*100)+'%</span></div>' +
+        '</div>' +
+      '</div>';
+    }
+    html += '</div>';
+
+    // Bars: per-subject present/absent, worst first
+    html += '<div class="insight-card"><h4>By subject</h4>';
+    var sorted = state.subjects.slice().sort(function(a,b){
+      var pa = subjectStats(a).pct, pb = subjectStats(b).pct;
+      if(pa===null) return 1; if(pb===null) return -1;
+      return pa - pb;
+    });
+    sorted.forEach(function(s){
+      var st = subjectStats(s);
+      var pPct = st.total ? (st.present/st.total*100) : 0;
+      html += '<div class="bar-row"><div class="bhead"><span class="bname">'+escapeHtml(s.name)+'</span>' +
+        '<span class="bpct">' + (st.pct===null? '—' : Math.round(st.pct)+'%') + ' · ' + st.present + '/' + st.total + '</span></div>' +
+        '<div class="bar-track"><div class="bar-fill present" style="width:'+pPct+'%"></div>' +
+        '<div class="bar-fill absent" style="width:'+(100-pPct)+'%"></div></div></div>';
+    });
+    html += '</div>';
+
+    // 14-day activity strip
+    html += '<div class="insight-card"><h4>Last 14 days</h4>' + heatStripSVG() +
+      '<div class="heat-labels"><span>14 days ago</span><span>today</span></div></div>';
+
+    // Streaks
+    var streaks = computeStreaks();
+    html += '<div class="insight-card"><h4>Streaks</h4><div class="streak-row">' +
+      '<div class="streak-box"><div class="num">'+streaks.current+'</div><div class="lbl">day streak now</div></div>' +
+      '<div class="streak-box"><div class="num">'+streaks.best+'</div><div class="lbl">best streak</div></div>' +
+    '</div></div>';
+
+    // Backup
+    html += '<div class="insight-card"><h4>Backup your data</h4>' +
+      '<div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;">Everything is stored only on this device. Export a backup now and then, or before switching phones.</div>' +
+      '<div class="data-actions">' +
+        '<button class="data-btn" id="exportBtn">Export JSON</button>' +
+        '<button class="data-btn" id="importBtn">Import JSON</button>' +
+      '</div></div>';
+
+    v.innerHTML = html;
+
+    document.getElementById('exportBtn').onclick = exportData;
+    document.getElementById('importBtn').onclick = function(){ document.getElementById('importFile').click(); };
+    document.getElementById('importFile').onchange = importData;
+  }
+
+  function donutSVG(present, absent){
+    var total = present + absent;
+    var size = 120, r = 50, c = size/2, cwidth = 16;
+    var circumference = 2 * Math.PI * r;
+    var presentLen = total ? (present/total)*circumference : 0;
+    return '<svg viewBox="0 0 '+size+' '+size+'">' +
+      '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="var(--absent-bg)" stroke-width="'+cwidth+'"/>' +
+      '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="var(--present)" stroke-width="'+cwidth+'" ' +
+        'stroke-dasharray="'+presentLen+' '+circumference+'" stroke-linecap="round" transform="rotate(-90 '+c+' '+c+')"/>' +
+      '<text x="'+c+'" y="'+(c+2)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="600" font-size="18" fill="var(--ink)">' +
+        Math.round(total?present/total*100:0) + '%</text>' +
+    '</svg>';
+  }
+
+  function heatStripSVG(){
+    var out = '<div class="heatstrip">';
+    for(var i=13;i>=0;i--){
+      var d = addDays(todayStr(), -i);
+      var p=0, t=0;
+      state.subjects.forEach(function(s){
+        var rec = state.records[s.id] || {};
+        if(rec[d]){ t++; if(rec[d]==='present') p++; }
+      });
+      var cls = 'none-data';
+      if(t>0){
+        if(p===t) cls='full'; else if(p===0) cls='none'; else cls='partial';
+      }
+      out += '<div class="heat-cell '+(t>0?cls:'')+'" title="'+d+'"></div>';
+    }
+    out += '</div>';
+    return out;
+  }
+
+  function computeStreaks(){
+    // a "good" day = every subject marked that day was present (and at least one class marked)
+    var current=0, best=0, run=0;
+    var d = todayStr();
+    var checkDates = [];
+    for(var i=0;i<120;i++){ checkDates.push(addDays(todayStr(), -i)); }
+    // best streak scanning oldest to newest
+    checkDates.slice().reverse().forEach(function(day){
+      var p=0,t=0;
+      state.subjects.forEach(function(s){
+        var rec = state.records[s.id] || {};
+        if(rec[day]){ t++; if(rec[day]==='present') p++; }
+      });
+      if(t>0 && p===t){ run++; if(run>best) best=run; } else if(t>0){ run=0; }
+    });
+    // current streak: walk backwards from today while days are full-present (skip days with no data)
+    for(var j=0;j<checkDates.length;j++){
+      var day = checkDates[j];
+      var p2=0,t2=0;
+      state.subjects.forEach(function(s){
+        var rec = state.records[s.id] || {};
+        if(rec[day]){ t2++; if(rec[day]==='present') p2++; }
+      });
+      if(t2===0) continue;
+      if(p2===t2) current++; else break;
+    }
+    return { current: current, best: best };
+  }
+
+  function exportData(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'rollcall-backup-' + todayStr() + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Backup downloaded');
+  }
+
+  function importData(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        var data = JSON.parse(ev.target.result);
+        if(!data.subjects || !data.records) throw new Error('bad file');
+        if(!confirm('This will replace all current data with the backup file. Continue?')) return;
+        state = { subjects: data.subjects, records: data.records };
+        saveState();
+        toast('Backup restored');
+        render();
+      }catch(err){
+        toast('That file doesn\u2019t look like a Roll Call backup');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
