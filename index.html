@@ -288,23 +288,45 @@
 <script>
 (function(){
   "use strict";
-  var STORAGE_KEY = 'rollcall_v1';
-  var state = loadState();
+  var STATE_KEY = 'rollcall_state';
+  var BANNER_KEY = 'rollcall_hide_banner';
+  var state = { subjects: [], records: {} };
   var currentTab = 'today';
   var selectedDate = todayStr();
-  var hideBanner = localStorage.getItem('rollcall_hide_banner') === '1';
+  var hideBanner = false;
+  var ready = false;
 
-  function loadState(){
+  // ---------- Persistence (artifact-safe storage, no localStorage) ----------
+  async function loadState(){
     try{
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return { subjects: [], records: {} };
-      var parsed = JSON.parse(raw);
+      var res = await window.storage.get(STATE_KEY, false);
+      if(!res) return { subjects: [], records: {} };
+      var parsed = JSON.parse(res.value);
       if(!parsed.subjects) parsed.subjects = [];
       if(!parsed.records) parsed.records = {};
       return parsed;
-    }catch(e){ return { subjects: [], records: {} }; }
+    }catch(e){
+      return { subjects: [], records: {} };
+    }
   }
-  function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  async function saveState(){
+    try{
+      var result = await window.storage.set(STATE_KEY, JSON.stringify(state), false);
+      if(!result) toast('Couldn\u2019t save — try again');
+    }catch(e){
+      toast('Couldn\u2019t save — try again');
+    }
+  }
+  async function loadHideBanner(){
+    try{
+      var res = await window.storage.get(BANNER_KEY, false);
+      return !!res && res.value === '1';
+    }catch(e){ return false; }
+  }
+  async function saveHideBanner(v){
+    try{ await window.storage.set(BANNER_KEY, v ? '1' : '0', false); }catch(e){}
+  }
+
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function todayStr(){ return fmt(new Date()); }
   function fmt(d){
@@ -450,7 +472,11 @@
 
   function bindTodayEvents(){
     var b = document.getElementById('bannerX');
-    if(b) b.onclick = function(){ hideBanner = true; localStorage.setItem('rollcall_hide_banner','1'); render(); };
+    if(b) b.onclick = function(){
+      hideBanner = true;
+      render();
+      saveHideBanner(true);
+    };
 
     var go = document.getElementById('goSubjects');
     if(go) go.onclick = function(){ currentTab='subjects'; render(); };
@@ -471,8 +497,8 @@
         } else {
           state.records[id][selectedDate] = status;
         }
-        saveState();
         render();
+        saveState();
       };
     });
 
@@ -518,9 +544,9 @@
       var target = parseInt(targetEl.value,10);
       if(isNaN(target) || target<0 || target>100) target = 75;
       state.subjects.push({ id: uid(), name: name, target: target });
-      saveState();
-      toast('Added ' + name);
       render();
+      toast('Added ' + name);
+      saveState();
     };
 
     document.querySelectorAll('[data-del]').forEach(function(btn){
@@ -531,8 +557,8 @@
         if(confirm('Delete "'+s.name+'" and all its attendance history? This cannot be undone.')){
           state.subjects = state.subjects.filter(function(x){ return x.id!==id; });
           delete state.records[id];
-          saveState();
           render();
+          saveState();
         }
       };
     });
@@ -551,8 +577,8 @@
           var tnum = parseInt(newTarget,10);
           if(!isNaN(tnum) && tnum>=0 && tnum<=100) s.target = tnum;
         }
-        saveState();
         render();
+        saveState();
       };
     });
 
@@ -588,9 +614,9 @@
           var d = btn.getAttribute('data-rmdate');
           var id = btn.getAttribute('data-rmid');
           delete state.records[id][d];
-          saveState();
           openHistory(id);
           render();
+          saveState();
         };
       });
     }
@@ -611,6 +637,7 @@
   }
 
   function render(){
+    if(!ready) return;
     document.getElementById('tabToday').classList.toggle('active', currentTab==='today');
     document.getElementById('tabInsights').classList.toggle('active', currentTab==='insights');
     document.getElementById('tabSubjects').classList.toggle('active', currentTab==='subjects');
@@ -687,7 +714,7 @@
 
     // Backup
     html += '<div class="insight-card"><h4>Backup your data</h4>' +
-      '<div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;">Everything is stored only on this device. Export a backup now and then, or before switching phones.</div>' +
+      '<div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;">Your data is saved automatically. Export a backup now and then for extra safety, or before switching devices.</div>' +
       '<div class="data-actions">' +
         '<button class="data-btn" id="exportBtn">Export JSON</button>' +
         '<button class="data-btn" id="importBtn">Import JSON</button>' +
@@ -736,7 +763,6 @@
   function computeStreaks(){
     // a "good" day = every subject marked that day was present (and at least one class marked)
     var current=0, best=0, run=0;
-    var d = todayStr();
     var checkDates = [];
     for(var i=0;i<120;i++){ checkDates.push(addDays(todayStr(), -i)); }
     // best streak scanning oldest to newest
@@ -782,9 +808,9 @@
         if(!data.subjects || !data.records) throw new Error('bad file');
         if(!confirm('This will replace all current data with the backup file. Continue?')) return;
         state = { subjects: data.subjects, records: data.records };
-        saveState();
-        toast('Backup restored');
         render();
+        toast('Backup restored');
+        saveState();
       }catch(err){
         toast('That file doesn\u2019t look like a Roll Call backup');
       }
@@ -793,7 +819,19 @@
     e.target.value = '';
   }
 
-  render();
+  async function init(){
+    document.getElementById('view').innerHTML = '<div class="empty">Loading…</div>';
+    try{
+      state = await loadState();
+      hideBanner = await loadHideBanner();
+    }catch(e){
+      // fall back to empty state if storage is unavailable entirely
+    }
+    ready = true;
+    render();
+  }
+
+  init();
 })();
 </script>
 </body>
