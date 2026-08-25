@@ -50,6 +50,9 @@
     position:sticky; top:0; z-index:20;
     padding:calc(18px + var(--safe-t)) 20px 14px;
     background:linear-gradient(var(--paper) 82%, transparent);
+    /* isolate on its own compositing layer so the blur doesn't tear during fast scroll on iOS */
+    -webkit-transform:translateZ(0); transform:translateZ(0);
+    will-change:transform;
   }
   .brand{display:flex; align-items:center; justify-content:space-between; gap:12px;}
   .brand h1{font-size:22px; margin:0; letter-spacing:0.2px;}
@@ -98,7 +101,12 @@
   .datebar .calwrap{position:relative; width:34px; height:34px;}
 
   /* Month calendar */
-  .cal-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:10px;}
+  .cal-card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; margin-bottom:10px;
+    /* establishes its own block-formatting context so children can never visually escape it */
+    overflow:hidden;
+  }
   .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
   .cal-head .arrow{
     width:34px; height:34px; display:flex; align-items:center; justify-content:center;
@@ -110,7 +118,12 @@
   .cal-grid.cal-weekdays{margin-bottom:4px;}
   .cal-wd{text-align:center; font-size:10.5px; color:var(--ink-faint); font-weight:600; padding:2px 0;}
   .cal-cell{
-    aspect-ratio:1; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    /* FIX: explicit height instead of aspect-ratio. iOS Safari doesn't reliably size
+       CSS Grid auto-rows from aspect-ratio items, which was causing the whole grid's
+       box to collapse while the cells still painted at full size — hence the overlap
+       with the content rendered after it. A fixed height sidesteps that bug entirely. */
+    height:42px;
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
     font-size:13px; font-weight:600; background:var(--paper); border:1px solid var(--line); color:var(--ink-soft);
   }
   .cal-cell.empty{border:none; background:transparent;}
@@ -211,6 +224,8 @@
     padding:10px 16px calc(10px + var(--safe-b));
     background:rgba(238,242,238,0.86); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     border-top:1px solid var(--line);
+    -webkit-transform:translateZ(0); transform:translateZ(0);
+    will-change:transform;
   }
   nav.tabbar button{
     flex:1; max-width:220px; padding:10px 0; border-radius:12px; font-weight:600; font-size:13.5px;
@@ -274,7 +289,7 @@
   .bar-fill.present{background:var(--present); height:100%;}
   .bar-fill.absent{background:var(--absent); height:100%;}
   .heatstrip{display:grid; grid-template-columns:repeat(7, 1fr); gap:7px;}
-  .heat-cell{aspect-ratio:1; border-radius:7px; background:var(--paper-line);}
+  .heat-cell{height:34px; border-radius:7px; background:var(--paper-line);}
   .heat-cell.full{background:var(--present);}
   .heat-cell.partial{background:var(--margin);}
   .heat-cell.none{background:var(--absent);}
