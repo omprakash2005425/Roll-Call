@@ -39,7 +39,7 @@
     font-family:'Inter',sans-serif;
     -webkit-font-smoothing:antialiased;
     min-height:100vh;
-    padding-bottom:calc(120px + var(--safe-b));
+    padding-bottom:calc(150px + var(--safe-b));
   }
   .display{font-family:'Zilla Slab',serif;}
   .mono{font-family:'IBM Plex Mono',monospace;}
@@ -50,7 +50,6 @@
     position:sticky; top:0; z-index:20;
     padding:calc(18px + var(--safe-t)) 20px 14px;
     background:linear-gradient(var(--paper) 82%, transparent);
-    /* isolate on its own compositing layer so the blur doesn't tear during fast scroll on iOS */
     -webkit-transform:translateZ(0); transform:translateZ(0);
     will-change:transform;
   }
@@ -72,7 +71,8 @@
     margin:18px 2px 8px;
   }
 
-  /* Day/Month toggle */
+  .bottom-spacer{ height:72px; width:100%; }
+
   .viewToggle{
     display:flex; gap:6px; background:var(--card); border:1px solid var(--line);
     border-radius:12px; padding:4px; margin-bottom:10px;
@@ -104,7 +104,6 @@
   .cal-card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:14px; margin-bottom:10px;
-    /* establishes its own block-formatting context so children can never visually escape it */
     overflow:hidden;
   }
   .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
@@ -114,19 +113,23 @@
   }
   .cal-head .arrow:active{background:var(--paper);}
   .cal-label{font-weight:600; font-size:14.5px;}
-  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
-  .cal-grid.cal-weekdays{margin-bottom:4px;}
+
+  /* FIX: explicit grid-auto-rows instead of relying on cell content to size rows.
+     iOS WebKit was previously computing row height from the interactive element's
+     own intrinsic box (when cells were <button>s) rather than the explicit
+     height:42px on .cal-cell — rows collapsed and the calendar overlapped the
+     content below it. Fixed row height on the grid itself + divs instead of
+     buttons for the day cells removes both causes. */
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:42px; gap:6px; align-content:start;}
+  .cal-grid.cal-weekdays{margin-bottom:4px; grid-auto-rows:auto;}
   .cal-wd{text-align:center; font-size:10.5px; color:var(--ink-faint); font-weight:600; padding:2px 0;}
   .cal-cell{
-    /* FIX: explicit height instead of aspect-ratio. iOS Safari doesn't reliably size
-       CSS Grid auto-rows from aspect-ratio items, which was causing the whole grid's
-       box to collapse while the cells still painted at full size — hence the overlap
-       with the content rendered after it. A fixed height sidesteps that bug entirely. */
     height:42px;
     border-radius:10px; display:flex; align-items:center; justify-content:center;
     font-size:13px; font-weight:600; background:var(--paper); border:1px solid var(--line); color:var(--ink-soft);
+    cursor:pointer;
   }
-  .cal-cell.empty{border:none; background:transparent;}
+  .cal-cell.empty{border:none; background:transparent; cursor:default;}
   .cal-cell.full{background:var(--present-bg); color:var(--present); border-color:var(--present);}
   .cal-cell.partial{background:var(--margin-bg); color:var(--margin); border-color:var(--margin);}
   .cal-cell.none{background:var(--absent-bg); color:var(--absent); border-color:var(--absent);}
@@ -179,7 +182,6 @@
     font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:12.5px;
   }
 
-  /* Subjects manage view */
   .subj-manage-row{display:flex; align-items:center; gap:10px;}
   .subj-manage-row .name{font-family:'Zilla Slab',serif; font-weight:600; font-size:15.5px;}
   .subj-manage-row .target{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
@@ -217,7 +219,6 @@
     width:100%; border:1px solid var(--line); border-radius:10px; padding:11px 12px; font-size:14.5px; background:var(--paper);
   }
 
-  /* Tab bar */
   nav.tabbar{
     position:fixed; left:0; right:0; bottom:0; z-index:30;
     display:flex; justify-content:center; gap:6px;
@@ -234,7 +235,6 @@
   nav.tabbar button .ic{font-size:17px;}
   nav.tabbar button.active{background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(31,46,41,0.08);}
 
-  /* banner */
   .banner{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:12px 14px; margin-bottom:14px; font-size:13px; color:var(--ink-soft); position:relative;
@@ -244,7 +244,6 @@
   .banner ol{margin:8px 0 0; padding-left:18px;}
   .banner li{margin-bottom:2px;}
 
-  /* modal */
   .modal-overlay{
     position:fixed; inset:0; background:rgba(31,46,41,0.42); z-index:50;
     display:flex; align-items:flex-end; justify-content:center;
@@ -271,7 +270,6 @@
   .hist-row .right{display:flex; align-items:center; gap:10px;}
   .hist-empty{text-align:center; color:var(--ink-soft); padding:30px 0; font-size:13.5px;}
 
-  /* Insights tab */
   .insight-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px;}
   .insight-card h4{margin:0 0 14px; font-family:'Zilla Slab',serif; font-size:16px;}
   .donut-wrap{display:flex; align-items:center; gap:20px;}
@@ -328,6 +326,7 @@
 </header>
 
 <main id="view"></main>
+<div class="bottom-spacer" aria-hidden="true"></div>
 
 <nav class="tabbar">
   <button id="tabToday" class="active"><span class="ic">✓</span>Today</button>
@@ -363,7 +362,6 @@
   var hideBanner = false;
   var ready = false;
 
-  // ---------- Persistence (artifact-safe storage, no localStorage) ----------
   async function loadState(){
     try{
       var res = await window.storage.get(STATE_KEY, false);
@@ -435,7 +433,7 @@
       else if(v==='absent') absent++;
       else if(v==='cancelled') cancelled++;
     });
-    var total = present + absent; // cancelled/holiday days don't count toward attendance %
+    var total = present + absent;
     var pct = total ? (present/total*100) : null;
     var target = targetOf(subj) / 100;
     var advice = null;
@@ -499,6 +497,10 @@
       '</div>';
   }
 
+  // FIX: day cells are now plain <div>s with role="button", not <button>s.
+  // WebKit was sizing the grid row from the button's own intrinsic layout box
+  // instead of the explicit height:42px, causing rows to collapse and the
+  // calendar to overlap the "Mark attendance" cards beneath it.
   function renderMonthCalendar(){
     var meta = monthMeta(monthCursor);
     var dim = daysInMonth(meta.y, meta.m);
@@ -525,7 +527,7 @@
       else if(hasC){ cls = 'holiday'; }
       var isToday = ds===todayStr();
       var isSel = ds===selectedDate;
-      html += '<button type="button" class="cal-cell '+cls+(isToday?' istoday':'')+(isSel?' issel':'')+'" data-date="'+ds+'">'+day+'</button>';
+      html += '<div class="cal-cell '+cls+(isToday?' istoday':'')+(isSel?' issel':'')+'" data-date="'+ds+'" role="button" tabindex="0">'+day+'</div>';
     }
     html += '</div></div>';
     return html;
@@ -629,8 +631,12 @@
       if(cp) cp.onclick = function(){ monthCursor = addMonths(monthCursor,-1); render(); };
       var cn = document.getElementById('calNext');
       if(cn) cn.onclick = function(){ monthCursor = addMonths(monthCursor,1); render(); };
-      document.querySelectorAll('.cal-cell[data-date]').forEach(function(btn){
-        btn.onclick = function(){ selectedDate = btn.getAttribute('data-date'); render(); };
+      // FIX: cells are divs now — bind both click and keyboard activation.
+      document.querySelectorAll('.cal-cell[data-date]').forEach(function(el){
+        el.onclick = function(){ selectedDate = el.getAttribute('data-date'); render(); };
+        el.onkeydown = function(e){
+          if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectedDate = el.getAttribute('data-date'); render(); }
+        };
       });
     }
 
@@ -745,7 +751,6 @@
     });
   }
 
-  // ---------- Modal system (no window.prompt/confirm — those are blocked in sandboxed iframes) ----------
   function openModal(title, bodyHtml, actionsHtml){
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalList').innerHTML = bodyHtml;
@@ -866,7 +871,6 @@
   document.getElementById('tabInsights').onclick = function(){ currentTab='insights'; render(); };
   document.getElementById('tabSubjects').onclick = function(){ currentTab='subjects'; render(); };
 
-  // ---------- Insights ----------
   function renderInsights(){
     var v = document.getElementById('view');
     if(state.subjects.length===0){
@@ -884,7 +888,6 @@
 
     var html = '';
 
-    // Donut: overall present vs absent
     html += '<div class="insight-card"><h4>Present vs absent — overall</h4>';
     if(totalAll===0){
       html += '<div class="hist-empty">No classes logged yet.</div>';
@@ -900,7 +903,6 @@
     }
     html += '</div>';
 
-    // Bars: per-subject present/absent, worst first
     html += '<div class="insight-card"><h4>By subject</h4>';
     var sorted = state.subjects.slice().sort(function(a,b){
       var pa = subjectStats(a).pct, pb = subjectStats(b).pct;
@@ -920,18 +922,15 @@
     });
     html += '</div>';
 
-    // 14-day activity strip
     html += '<div class="insight-card"><h4>Last 14 days</h4>' + heatStripSVG() +
       '<div class="heat-labels"><span>14 days ago</span><span>today</span></div></div>';
 
-    // Streaks
     var streaks = computeStreaks();
     html += '<div class="insight-card"><h4>Streaks</h4><div class="streak-row">' +
       '<div class="streak-box"><div class="num">'+streaks.current+'</div><div class="lbl">day streak now</div></div>' +
       '<div class="streak-box"><div class="num">'+streaks.best+'</div><div class="lbl">best streak</div></div>' +
     '</div></div>';
 
-    // Backup
     html += '<div class="insight-card"><h4>Backup your data</h4>' +
       '<div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;">Your data is saved automatically. Export a backup now and then for extra safety, or before switching devices.</div>' +
       '<div class="data-actions">' +
@@ -981,7 +980,6 @@
   }
 
   function computeStreaks(){
-    // a "good" day = every subject marked present/absent that day was present (holidays and no-data days are skipped)
     var current=0, best=0, run=0;
     var checkDates = [];
     for(var i=0;i<120;i++){ checkDates.push(addDays(todayStr(), -i)); }
@@ -1052,7 +1050,6 @@
       state = await loadState();
       hideBanner = await loadHideBanner();
     }catch(e){
-      // fall back to empty state if storage is unavailable entirely
     }
     ready = true;
     render();
