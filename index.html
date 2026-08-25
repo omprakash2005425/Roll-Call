@@ -69,6 +69,14 @@
     margin:18px 2px 8px;
   }
 
+  /* Day/Month toggle */
+  .viewToggle{
+    display:flex; gap:6px; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:4px; margin-bottom:10px;
+  }
+  .viewToggle .tglbtn{flex:1; padding:8px 0; border-radius:9px; font-weight:600; font-size:12.5px; color:var(--ink-soft);}
+  .viewToggle .tglbtn.active{background:var(--paper); color:var(--ink);}
+
   .datebar{
     display:flex; align-items:center; gap:8px; background:var(--card);
     border:1px solid var(--line); border-radius:12px; padding:6px 8px; margin-bottom:10px;
@@ -89,6 +97,31 @@
   }
   .datebar .calwrap{position:relative; width:34px; height:34px;}
 
+  /* Month calendar */
+  .cal-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:10px;}
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .cal-head .arrow{
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+    border-radius:9px; font-size:16px; color:var(--ink-soft);
+  }
+  .cal-head .arrow:active{background:var(--paper);}
+  .cal-label{font-weight:600; font-size:14.5px;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .cal-grid.cal-weekdays{margin-bottom:4px;}
+  .cal-wd{text-align:center; font-size:10.5px; color:var(--ink-faint); font-weight:600; padding:2px 0;}
+  .cal-cell{
+    aspect-ratio:1; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:600; background:var(--paper); border:1px solid var(--line); color:var(--ink-soft);
+  }
+  .cal-cell.empty{border:none; background:transparent;}
+  .cal-cell.full{background:var(--present-bg); color:var(--present); border-color:var(--present);}
+  .cal-cell.partial{background:var(--margin-bg); color:var(--margin); border-color:var(--margin);}
+  .cal-cell.none{background:var(--absent-bg); color:var(--absent); border-color:var(--absent);}
+  .cal-cell.holiday{background:var(--margin-bg); color:var(--margin); border-style:dashed; border-color:var(--margin);}
+  .cal-cell.istoday{box-shadow:0 0 0 2px var(--ink) inset;}
+  .cal-cell.issel{outline:2px solid var(--ink); outline-offset:2px;}
+  .cal-selected-label{text-align:center; font-size:13px; color:var(--ink-soft); margin:-2px 0 12px; font-weight:600;}
+
   .empty{
     text-align:center; padding:48px 20px; color:var(--ink-soft);
   }
@@ -102,6 +135,7 @@
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:12px 14px; margin-bottom:10px;
   }
+  .colordot{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:1px;}
   .subject-row .row1{display:flex; align-items:center; gap:12px;}
   .subject-row .namewrap{flex:1; min-width:0;}
   .subject-row .name{font-family:'Zilla Slab',serif; font-weight:600; font-size:16px; line-height:1.2;
@@ -115,14 +149,15 @@
   .badge.bad{color:var(--absent); background:var(--absent-bg);}
   .badge.neutral{color:var(--ink-soft); background:var(--paper);}
 
-  .row2{display:flex; gap:8px; margin-top:10px;}
+  .row2{display:flex; gap:6px; margin-top:10px;}
   .markbtn{
-    flex:1; padding:11px 0; border-radius:10px; font-weight:600; font-size:13.5px;
+    flex:1; padding:10px 0; border-radius:10px; font-weight:600; font-size:12.5px;
     border:1.5px solid var(--line); color:var(--ink-soft); transition:transform .06s ease;
   }
   .markbtn:active{transform:scale(0.97);}
   .markbtn.present.active{background:var(--present); border-color:var(--present); color:#fff;}
   .markbtn.absent.active{background:var(--absent); border-color:var(--absent); color:#fff;}
+  .markbtn.cancelled.active{background:var(--margin); border-color:var(--margin); color:#fff;}
 
   .stampmark{position:relative; width:52px; height:52px; flex:none;}
   .stampmark svg{width:100%; height:100%; display:block;}
@@ -159,6 +194,16 @@
   }
   .addform .addbtn:active{opacity:.85;}
 
+  .swatchrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .swatch{width:30px; height:30px; border-radius:50%; border:2px solid transparent;}
+  .swatch.sel{border-color:var(--ink);}
+
+  .editform label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-faint); margin:14px 0 5px;}
+  .editform label:first-child{margin-top:0;}
+  .editform input[type=text], .editform input[type=number]{
+    width:100%; border:1px solid var(--line); border-radius:10px; padding:11px 12px; font-size:14.5px; background:var(--paper);
+  }
+
   /* Tab bar */
   nav.tabbar{
     position:fixed; left:0; right:0; bottom:0; z-index:30;
@@ -192,7 +237,7 @@
   .modal-overlay.hidden{display:none;}
   .modal{
     background:var(--paper); width:100%; max-width:520px; border-radius:20px 20px 0 0;
-    max-height:78vh; display:flex; flex-direction:column; padding-bottom:calc(16px + var(--safe-b));
+    max-height:82vh; display:flex; flex-direction:column; padding-bottom:calc(16px + var(--safe-b));
     animation:slideup .18s ease-out;
   }
   @keyframes slideup{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
@@ -202,6 +247,8 @@
   .modal .mhead h3{margin:0; font-family:'Zilla Slab',serif; font-size:18px;}
   .modal .mhead button{font-size:20px; color:var(--ink-soft); padding:4px 8px;}
   .modal .mlist{overflow-y:auto; padding:6px 18px 10px;}
+  .modal .mactions{display:flex; gap:10px; padding:12px 18px 4px;}
+  .modal .mactions .data-btn{flex:1; text-align:center;}
   .hist-row{
     display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line);
   }
@@ -211,31 +258,32 @@
 
   /* Insights tab */
   .insight-card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px;}
-  .insight-card h4{margin:0 0 12px; font-family:'Zilla Slab',serif; font-size:15px;}
+  .insight-card h4{margin:0 0 14px; font-family:'Zilla Slab',serif; font-size:16px;}
   .donut-wrap{display:flex; align-items:center; gap:20px;}
-  .donut-wrap svg{width:120px; height:120px; flex:none;}
+  .donut-wrap svg{width:150px; height:150px; flex:none;}
   .donut-legend{flex:1;}
-  .legend-row{display:flex; align-items:center; gap:8px; font-size:13.5px; margin-bottom:8px;}
-  .legend-row .dot{width:10px; height:10px; border-radius:3px; flex:none;}
+  .legend-row{display:flex; align-items:center; gap:8px; font-size:15px; margin-bottom:10px;}
+  .legend-row .dot{width:11px; height:11px; border-radius:3px; flex:none;}
   .legend-row .num{margin-left:auto; font-family:'IBM Plex Mono',monospace; font-weight:600;}
-  .bar-row{margin-bottom:14px;}
+  .bar-row{margin-bottom:16px;}
   .bar-row:last-child{margin-bottom:0;}
-  .bar-row .bhead{display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;}
-  .bar-row .bhead .bname{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%;}
-  .bar-row .bhead .bpct{font-family:'IBM Plex Mono',monospace; color:var(--ink-soft);}
-  .bar-track{height:9px; border-radius:6px; background:var(--paper-line); overflow:hidden; display:flex;}
+  .bar-row .bhead{display:flex; justify-content:space-between; align-items:center; font-size:14px; margin-bottom:6px;}
+  .bar-row .bhead .bname{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:56%; display:flex; align-items:center;}
+  .bar-row .bhead .bpct{font-family:'IBM Plex Mono',monospace; color:var(--ink-soft); font-size:12.5px;}
+  .bar-track{height:10px; border-radius:6px; background:var(--paper-line); overflow:hidden; display:flex;}
   .bar-fill.present{background:var(--present); height:100%;}
   .bar-fill.absent{background:var(--absent); height:100%;}
-  .heatstrip{display:grid; grid-template-columns:repeat(14, 1fr); gap:5px;}
-  .heat-cell{aspect-ratio:1; border-radius:5px; background:var(--paper-line);}
+  .heatstrip{display:grid; grid-template-columns:repeat(7, 1fr); gap:7px;}
+  .heat-cell{aspect-ratio:1; border-radius:7px; background:var(--paper-line);}
   .heat-cell.full{background:var(--present);}
   .heat-cell.partial{background:var(--margin);}
   .heat-cell.none{background:var(--absent);}
-  .heat-labels{display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink-faint); margin-top:6px;}
+  .heat-cell.holiday{background:var(--margin-bg); border:1px dashed var(--margin);}
+  .heat-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-faint); margin-top:8px;}
   .streak-row{display:flex; gap:10px;}
-  .streak-box{flex:1; background:var(--paper); border-radius:12px; padding:12px; text-align:center;}
-  .streak-box .num{font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600;}
-  .streak-box .lbl{font-size:11px; color:var(--ink-soft); margin-top:2px;}
+  .streak-box{flex:1; background:var(--paper); border-radius:12px; padding:14px; text-align:center;}
+  .streak-box .num{font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600;}
+  .streak-box .lbl{font-size:11.5px; color:var(--ink-soft); margin-top:3px;}
   .data-actions{display:flex; gap:10px;}
   .data-btn{
     flex:1; padding:12px 0; border-radius:10px; font-weight:600; font-size:13.5px;
@@ -280,6 +328,7 @@
       <button id="modalClose">✕</button>
     </div>
     <div class="mlist" id="modalList"></div>
+    <div class="mactions" id="modalActions" style="display:none;"></div>
   </div>
 </div>
 
@@ -290,9 +339,12 @@
   "use strict";
   var STATE_KEY = 'rollcall_state';
   var BANNER_KEY = 'rollcall_hide_banner';
+  var COLORS = ['#2F6F4E','#B4800E','#A6402F','#3B6EA5','#6B4E9E','#1F7A72','#9C4F79','#5C6B3D'];
   var state = { subjects: [], records: {} };
   var currentTab = 'today';
   var selectedDate = todayStr();
+  var dayViewMode = 'day'; // 'day' | 'month'
+  var monthCursor = todayStr();
   var hideBanner = false;
   var ready = false;
 
@@ -340,6 +392,18 @@
   function addDays(str, n){
     var d = new Date(str+'T00:00:00'); d.setDate(d.getDate()+n); return fmt(d);
   }
+  function monthMeta(str){
+    var d = new Date(str+'T00:00:00');
+    return { y: d.getFullYear(), m: d.getMonth() };
+  }
+  function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+  function firstWeekday(y,m){ return new Date(y,m,1).getDay(); }
+  function addMonths(str, n){
+    var meta = monthMeta(str);
+    var d = new Date(meta.y, meta.m+n, 1);
+    return fmt(d);
+  }
+  function targetOf(s){ return (typeof s.target === 'number') ? s.target : 75; }
   function toast(msg){
     var t = document.getElementById('toast');
     t.textContent = msg; t.classList.add('show');
@@ -349,10 +413,16 @@
   function subjectStats(subj){
     var rec = state.records[subj.id] || {};
     var dates = Object.keys(rec);
-    var total = dates.length;
-    var present = dates.filter(function(d){ return rec[d]==='present'; }).length;
+    var present=0, absent=0, cancelled=0;
+    dates.forEach(function(d){
+      var v = rec[d];
+      if(v==='present') present++;
+      else if(v==='absent') absent++;
+      else if(v==='cancelled') cancelled++;
+    });
+    var total = present + absent; // cancelled/holiday days don't count toward attendance %
     var pct = total ? (present/total*100) : null;
-    var target = (subj.target || 75) / 100;
+    var target = targetOf(subj) / 100;
     var advice = null;
     if(total > 0){
       var p = present, t = total, r = target;
@@ -362,10 +432,10 @@
         advice = bunkable > 0 ? ('can miss ' + bunkable + ' more') : 'right at the line';
       } else {
         var need = Math.ceil((r*t - p) / (1 - r));
-        advice = 'attend next ' + need + ' to hit ' + (subj.target||75) + '%';
+        advice = 'attend next ' + need + ' to hit ' + targetOf(subj) + '%';
       }
     }
-    return { total: total, present: present, pct: pct, advice: advice, target: subj.target||75 };
+    return { total: total, present: present, absent: absent, cancelled: cancelled, pct: pct, advice: advice, target: targetOf(subj) };
   }
 
   function stampSVG(pct, size, seedStr){
@@ -395,7 +465,7 @@
     subs.forEach(function(s){
       var st = subjectStats(s);
       totalAll += st.total; presentAll += st.present;
-      if(st.pct !== null && st.pct < (s.target||75)) below++;
+      if(st.pct !== null && st.pct < targetOf(s)) below++;
     });
     var pct = totalAll ? Math.round(presentAll/totalAll*100) : null;
     var box = document.getElementById('overallBox');
@@ -414,6 +484,38 @@
       '</div>';
   }
 
+  function renderMonthCalendar(){
+    var meta = monthMeta(monthCursor);
+    var dim = daysInMonth(meta.y, meta.m);
+    var fw = firstWeekday(meta.y, meta.m);
+    var monthLabel = new Date(meta.y, meta.m, 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
+    var html = '<div class="cal-card">' +
+      '<div class="cal-head"><button class="arrow" id="calPrev">‹</button>' +
+        '<div class="cal-label">'+monthLabel+'</div>' +
+        '<button class="arrow" id="calNext">›</button></div>' +
+      '<div class="cal-grid cal-weekdays">' + ['S','M','T','W','T','F','S'].map(function(d){return '<div class="cal-wd">'+d+'</div>';}).join('') + '</div>' +
+      '<div class="cal-grid">';
+    for(var i=0;i<fw;i++) html += '<div class="cal-cell empty"></div>';
+    for(var day=1; day<=dim; day++){
+      var ds = meta.y+'-'+String(meta.m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      var p=0,t=0,hasC=false;
+      state.subjects.forEach(function(s){
+        var rec = state.records[s.id]||{};
+        var v = rec[ds];
+        if(v==='present'||v==='absent'){ t++; if(v==='present') p++; }
+        else if(v==='cancelled') hasC=true;
+      });
+      var cls = '';
+      if(t>0){ cls = p===t?'full':(p===0?'none':'partial'); }
+      else if(hasC){ cls = 'holiday'; }
+      var isToday = ds===todayStr();
+      var isSel = ds===selectedDate;
+      html += '<button type="button" class="cal-cell '+cls+(isToday?' istoday':'')+(isSel?' issel':'')+'" data-date="'+ds+'">'+day+'</button>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
   function renderToday(){
     var v = document.getElementById('view');
     var isToday = selectedDate === todayStr();
@@ -428,14 +530,6 @@
       '</div>';
     }
 
-    html += '<div class="datebar' + (isToday?' is-today':'') + '">' +
-      '<button class="arrow" id="prevDay">‹</button>' +
-      '<div class="datelabel">' + prettyDate(selectedDate) + '<span class="today-pill">Today</span></div>' +
-      '<div class="calwrap"><button class="arrow" id="calBtn">📅</button>' +
-        '<input type="date" id="dateInput" value="'+selectedDate+'"></div>' +
-      '<button class="arrow" id="nextDay" '+(isToday?'style="visibility:hidden"':'')+'>›</button>' +
-    '</div>';
-
     if(state.subjects.length === 0){
       html += '<div class="empty">' + stampSVG(null,64,'empty') +
         '<div style="margin-top:10px;">No subjects yet.<br>Head to the Subjects tab to add your first one.</div>' +
@@ -446,22 +540,44 @@
       return;
     }
 
+    html += '<div class="viewToggle">' +
+      '<button class="tglbtn'+(dayViewMode==='day'?' active':'')+'" id="vtDay">Day</button>' +
+      '<button class="tglbtn'+(dayViewMode==='month'?' active':'')+'" id="vtMonth">Month</button>' +
+    '</div>';
+
+    if(dayViewMode==='month'){
+      html += renderMonthCalendar();
+      html += '<div class="cal-selected-label">Marking for ' + prettyDate(selectedDate) + (isToday?' · Today':'') + '</div>';
+    } else {
+      html += '<div class="datebar' + (isToday?' is-today':'') + '">' +
+        '<button class="arrow" id="prevDay">‹</button>' +
+        '<div class="datelabel">' + prettyDate(selectedDate) + '<span class="today-pill">Today</span></div>' +
+        '<div class="calwrap"><button class="arrow" id="calBtn">📅</button>' +
+          '<input type="date" id="dateInput" value="'+selectedDate+'"></div>' +
+        '<button class="arrow" id="nextDay" '+(isToday?'style="visibility:hidden"':'')+'>›</button>' +
+      '</div>';
+    }
+
     html += '<div class="section-label">Mark attendance</div>';
     state.subjects.forEach(function(s){
       var st = subjectStats(s);
       var rec = state.records[s.id] || {};
       var status = rec[selectedDate];
-      var badgeClass = st.pct===null ? 'neutral' : (st.pct >= (s.target||75) ? 'ok' : (st.pct >= (s.target||75)-15 ? 'warn' : 'bad'));
-      html += '<div class="card subject-row" data-id="'+s.id+'">' +
+      var target = targetOf(s);
+      var badgeClass = st.pct===null ? 'neutral' : (st.pct >= target ? 'ok' : (st.pct >= target-15 ? 'warn' : 'bad'));
+      var dotColor = s.color || 'var(--ink-faint)';
+      var fracExtra = st.cancelled ? (' · '+st.cancelled+' holiday'+(st.cancelled>1?'s':'')) : '';
+      html += '<div class="card subject-row" data-id="'+s.id+'" style="border-left:4px solid '+dotColor+';">' +
         '<div class="row1">' +
           '<button class="stampbtn" data-hist="'+s.id+'">' + stampSVG(st.pct, 52, s.id) + '</button>' +
-          '<div class="namewrap"><div class="name">'+escapeHtml(s.name)+'</div>' +
-            '<div class="frac mono">' + st.present + '/' + st.total + ' classes' + '</div></div>' +
+          '<div class="namewrap"><div class="name"><span class="colordot" style="background:'+dotColor+'"></span>'+escapeHtml(s.name)+'</div>' +
+            '<div class="frac mono">' + st.present + '/' + st.total + ' classes' + fracExtra + '</div></div>' +
           '<span class="badge '+badgeClass+'">' + (st.advice || 'no data yet') + '</span>' +
         '</div>' +
         '<div class="row2">' +
           '<button class="markbtn present'+(status==='present'?' active':'')+'" data-mark="present" data-id="'+s.id+'">Present</button>' +
           '<button class="markbtn absent'+(status==='absent'?' active':'')+'" data-mark="absent" data-id="'+s.id+'">Absent</button>' +
+          '<button class="markbtn cancelled'+(status==='cancelled'?' active':'')+'" data-mark="cancelled" data-id="'+s.id+'">Holiday</button>' +
         '</div>' +
       '</div>';
     });
@@ -481,11 +597,27 @@
     var go = document.getElementById('goSubjects');
     if(go) go.onclick = function(){ currentTab='subjects'; render(); };
 
-    document.getElementById('prevDay').onclick = function(){ selectedDate = addDays(selectedDate,-1); render(); };
-    var nd = document.getElementById('nextDay');
-    if(nd) nd.onclick = function(){ selectedDate = addDays(selectedDate,1); render(); };
-    var di = document.getElementById('dateInput');
-    if(di) di.onchange = function(e){ selectedDate = e.target.value || todayStr(); render(); };
+    var vtDay = document.getElementById('vtDay');
+    if(vtDay) vtDay.onclick = function(){ dayViewMode='day'; render(); };
+    var vtMonth = document.getElementById('vtMonth');
+    if(vtMonth) vtMonth.onclick = function(){ dayViewMode='month'; monthCursor=selectedDate; render(); };
+
+    if(dayViewMode==='day'){
+      var pd = document.getElementById('prevDay');
+      if(pd) pd.onclick = function(){ selectedDate = addDays(selectedDate,-1); render(); };
+      var nd = document.getElementById('nextDay');
+      if(nd) nd.onclick = function(){ selectedDate = addDays(selectedDate,1); render(); };
+      var di = document.getElementById('dateInput');
+      if(di) di.onchange = function(e){ selectedDate = e.target.value || todayStr(); render(); };
+    } else {
+      var cp = document.getElementById('calPrev');
+      if(cp) cp.onclick = function(){ monthCursor = addMonths(monthCursor,-1); render(); };
+      var cn = document.getElementById('calNext');
+      if(cn) cn.onclick = function(){ monthCursor = addMonths(monthCursor,1); render(); };
+      document.querySelectorAll('.cal-cell[data-date]').forEach(function(btn){
+        btn.onclick = function(){ selectedDate = btn.getAttribute('data-date'); render(); };
+      });
+    }
 
     document.querySelectorAll('[data-mark]').forEach(function(btn){
       btn.onclick = function(){
@@ -514,27 +646,41 @@
       html += '<div class="empty" style="padding:24px 4px;">No subjects yet — add one below.</div>';
     }
     state.subjects.forEach(function(s){
-      html += '<div class="card subj-manage-row" data-id="'+s.id+'">' +
+      var dotColor = s.color || 'var(--ink-faint)';
+      html += '<div class="card subj-manage-row" data-id="'+s.id+'" style="border-left:4px solid '+(s.color||'var(--line)')+';">' +
         stampSVG(subjectStats(s).pct, 44, s.id) +
         '<div style="flex:1; min-width:0;">' +
-          '<div class="name">'+escapeHtml(s.name)+'</div>' +
-          '<div class="target">target ' + (s.target||75) + '%</div>' +
+          '<div class="name"><span class="colordot" style="background:'+dotColor+'"></span>'+escapeHtml(s.name)+'</div>' +
+          '<div class="target">target ' + targetOf(s) + '%</div>' +
         '</div>' +
         '<button class="iconbtn" data-edit="'+s.id+'">✎</button>' +
         '<button class="iconbtn danger" data-del="'+s.id+'">🗑</button>' +
       '</div>';
     });
 
+    var defaultColor = COLORS[state.subjects.length % COLORS.length];
     html += '<div class="section-label">Add a subject</div>' +
       '<div class="addform">' +
         '<div class="fields">' +
           '<input type="text" id="newName" placeholder="Subject name" maxlength="40">' +
           '<input type="number" id="newTarget" placeholder="Target %" value="75" min="0" max="100">' +
         '</div>' +
+        '<div class="swatchrow" id="newColorRow">' +
+          COLORS.map(function(c){ return '<button type="button" class="swatch'+(c===defaultColor?' sel':'')+'" data-color="'+c+'" style="background:'+c+'"></button>'; }).join('') +
+        '</div>' +
         '<button class="addbtn" id="addSubjBtn">Add subject</button>' +
       '</div>';
 
     v.innerHTML = html;
+
+    var chosenColor = defaultColor;
+    document.querySelectorAll('#newColorRow .swatch').forEach(function(btn){
+      btn.onclick = function(){
+        chosenColor = btn.getAttribute('data-color');
+        document.querySelectorAll('#newColorRow .swatch').forEach(function(x){ x.classList.remove('sel'); });
+        btn.classList.add('sel');
+      };
+    });
 
     document.getElementById('addSubjBtn').onclick = function(){
       var nameEl = document.getElementById('newName');
@@ -543,7 +689,7 @@
       if(!name){ toast('Give it a name first'); nameEl.focus(); return; }
       var target = parseInt(targetEl.value,10);
       if(isNaN(target) || target<0 || target>100) target = 75;
-      state.subjects.push({ id: uid(), name: name, target: target });
+      state.subjects.push({ id: uid(), name: name, target: target, color: chosenColor });
       render();
       toast('Added ' + name);
       saveState();
@@ -554,32 +700,23 @@
         var id = btn.getAttribute('data-del');
         var s = state.subjects.find(function(x){ return x.id===id; });
         if(!s) return;
-        if(confirm('Delete "'+s.name+'" and all its attendance history? This cannot be undone.')){
-          state.subjects = state.subjects.filter(function(x){ return x.id!==id; });
-          delete state.records[id];
-          render();
-          saveState();
-        }
+        confirmModal(
+          'Delete subject?',
+          'This will remove "'+escapeHtml(s.name)+'" and all its attendance history. This can\u2019t be undone.',
+          'Delete',
+          function(){
+            state.subjects = state.subjects.filter(function(x){ return x.id!==id; });
+            delete state.records[id];
+            render();
+            saveState();
+          },
+          true
+        );
       };
     });
 
     document.querySelectorAll('[data-edit]').forEach(function(btn){
-      btn.onclick = function(){
-        var id = btn.getAttribute('data-edit');
-        var s = state.subjects.find(function(x){ return x.id===id; });
-        if(!s) return;
-        var newName = prompt('Subject name', s.name);
-        if(newName===null) return;
-        newName = newName.trim();
-        if(newName) s.name = newName;
-        var newTarget = prompt('Target percentage (e.g. 75)', s.target||75);
-        if(newTarget!==null){
-          var tnum = parseInt(newTarget,10);
-          if(!isNaN(tnum) && tnum>=0 && tnum<=100) s.target = tnum;
-        }
-        render();
-        saveState();
-      };
+      btn.onclick = function(){ editSubjectModal(btn.getAttribute('data-edit')); };
     });
 
     document.querySelectorAll('[data-hist]').forEach(function(btn){
@@ -593,41 +730,104 @@
     });
   }
 
+  // ---------- Modal system (no window.prompt/confirm — those are blocked in sandboxed iframes) ----------
+  function openModal(title, bodyHtml, actionsHtml){
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalList').innerHTML = bodyHtml;
+    var act = document.getElementById('modalActions');
+    if(actionsHtml){ act.innerHTML = actionsHtml; act.style.display='flex'; }
+    else { act.innerHTML=''; act.style.display='none'; }
+    document.getElementById('modalOverlay').classList.remove('hidden');
+  }
+  function closeModal(){
+    document.getElementById('modalOverlay').classList.add('hidden');
+  }
+
+  function confirmModal(title, message, confirmLabel, onConfirm, danger){
+    openModal(
+      title,
+      '<div style="font-size:14px; color:var(--ink-soft); line-height:1.5; padding:4px 0 10px;">'+message+'</div>',
+      '<button class="data-btn" id="confirmCancel">Cancel</button>' +
+      '<button class="data-btn'+(danger?' danger':'')+'" id="confirmOk">'+confirmLabel+'</button>'
+    );
+    document.getElementById('confirmCancel').onclick = closeModal;
+    document.getElementById('confirmOk').onclick = function(){ closeModal(); onConfirm(); };
+  }
+
+  function editSubjectModal(id){
+    var s = state.subjects.find(function(x){ return x.id===id; });
+    if(!s) return;
+    var chosen = s.color || COLORS[0];
+    function swatchesHtml(){
+      return COLORS.map(function(c){
+        return '<button type="button" class="swatch'+(c===chosen?' sel':'')+'" data-color="'+c+'" style="background:'+c+'"></button>';
+      }).join('');
+    }
+    var body = '<div class="editform">' +
+      '<label>Name</label><input type="text" id="editName" value="'+escapeHtml(s.name)+'" maxlength="40">' +
+      '<label>Target %</label><input type="number" id="editTarget" value="'+targetOf(s)+'" min="0" max="100">' +
+      '<label>Color</label><div class="swatchrow" id="editColorRow">'+swatchesHtml()+'</div>' +
+    '</div>';
+    openModal(
+      'Edit subject',
+      body,
+      '<button class="data-btn" id="editCancel">Cancel</button>' +
+      '<button class="data-btn" id="editSave" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">Save</button>'
+    );
+    document.querySelectorAll('#editColorRow .swatch').forEach(function(btn){
+      btn.onclick = function(){
+        chosen = btn.getAttribute('data-color');
+        document.querySelectorAll('#editColorRow .swatch').forEach(function(x){ x.classList.remove('sel'); });
+        btn.classList.add('sel');
+      };
+    });
+    document.getElementById('editCancel').onclick = closeModal;
+    document.getElementById('editSave').onclick = function(){
+      var newName = document.getElementById('editName').value.trim();
+      var newTarget = parseInt(document.getElementById('editTarget').value,10);
+      if(newName) s.name = newName;
+      if(!isNaN(newTarget) && newTarget>=0 && newTarget<=100) s.target = newTarget;
+      s.color = chosen;
+      closeModal();
+      render();
+      saveState();
+    };
+  }
+
   function openHistory(subjId){
     var s = state.subjects.find(function(x){ return x.id===subjId; });
     if(!s) return;
-    document.getElementById('modalTitle').textContent = s.name + ' — history';
     var rec = state.records[subjId] || {};
     var dates = Object.keys(rec).sort().reverse();
-    var list = document.getElementById('modalList');
+    var body;
     if(dates.length===0){
-      list.innerHTML = '<div class="hist-empty">No classes logged yet.</div>';
+      body = '<div class="hist-empty">No classes logged yet.</div>';
     } else {
-      list.innerHTML = dates.map(function(d){
+      body = dates.map(function(d){
         var status = rec[d];
-        var badge = status==='present' ? '<span class="badge ok">Present</span>' : '<span class="badge bad">Absent</span>';
+        var badge = status==='present' ? '<span class="badge ok">Present</span>' :
+                    status==='cancelled' ? '<span class="badge warn">Holiday</span>' :
+                    '<span class="badge bad">Absent</span>';
         return '<div class="hist-row"><div class="d">' + prettyDate(d) + '</div>' +
           '<div class="right">' + badge + '<button class="iconbtn danger" data-rmdate="'+d+'" data-rmid="'+subjId+'">✕</button></div></div>';
       }).join('');
-      list.querySelectorAll('[data-rmdate]').forEach(function(btn){
-        btn.onclick = function(){
-          var d = btn.getAttribute('data-rmdate');
-          var id = btn.getAttribute('data-rmid');
-          delete state.records[id][d];
-          openHistory(id);
-          render();
-          saveState();
-        };
-      });
     }
-    document.getElementById('modalOverlay').classList.remove('hidden');
+    openModal(s.name + ' — history', body, null);
+    document.querySelectorAll('[data-rmdate]').forEach(function(btn){
+      btn.onclick = function(){
+        var d = btn.getAttribute('data-rmdate');
+        var id = btn.getAttribute('data-rmid');
+        delete state.records[id][d];
+        openHistory(id);
+        render();
+        saveState();
+      };
+    });
   }
 
-  document.getElementById('modalClose').onclick = function(){
-    document.getElementById('modalOverlay').classList.add('hidden');
-  };
+  document.getElementById('modalClose').onclick = closeModal;
   document.getElementById('modalOverlay').addEventListener('click', function(e){
-    if(e.target.id==='modalOverlay') e.currentTarget.classList.add('hidden');
+    if(e.target.id==='modalOverlay') closeModal();
   });
 
   function escapeHtml(str){
@@ -660,10 +860,10 @@
       return;
     }
 
-    var totalP=0, totalA=0;
+    var totalP=0, totalA=0, totalC=0;
     state.subjects.forEach(function(s){
       var st = subjectStats(s);
-      totalP += st.present; totalA += st.total - st.present;
+      totalP += st.present; totalA += st.absent; totalC += st.cancelled;
     });
     var totalAll = totalP + totalA;
 
@@ -678,6 +878,7 @@
         '<div class="donut-legend">' +
           '<div class="legend-row"><span class="dot" style="background:var(--present)"></span>Present<span class="num">'+totalP+'</span></div>' +
           '<div class="legend-row"><span class="dot" style="background:var(--absent)"></span>Absent<span class="num">'+totalA+'</span></div>' +
+          (totalC>0 ? '<div class="legend-row"><span class="dot" style="background:var(--margin)"></span>Holiday<span class="num">'+totalC+'</span></div>' : '') +
           '<div class="legend-row"><span class="dot" style="background:var(--line)"></span>Overall<span class="num">'+Math.round(totalP/totalAll*100)+'%</span></div>' +
         '</div>' +
       '</div>';
@@ -694,9 +895,12 @@
     sorted.forEach(function(s){
       var st = subjectStats(s);
       var pPct = st.total ? (st.present/st.total*100) : 0;
-      html += '<div class="bar-row"><div class="bhead"><span class="bname">'+escapeHtml(s.name)+'</span>' +
-        '<span class="bpct">' + (st.pct===null? '—' : Math.round(st.pct)+'%') + ' · ' + st.present + '/' + st.total + '</span></div>' +
-        '<div class="bar-track"><div class="bar-fill present" style="width:'+pPct+'%"></div>' +
+      var barColor = s.color || 'var(--present)';
+      html += '<div class="bar-row"><div class="bhead"><span class="bname">' +
+        '<span class="colordot" style="background:'+barColor+'"></span>'+escapeHtml(s.name)+'</span>' +
+        '<span class="bpct">' + (st.pct===null? '—' : Math.round(st.pct)+'%') + ' · ' + st.present + '/' + st.total +
+        (st.cancelled ? ' · '+st.cancelled+' holiday'+(st.cancelled>1?'s':'') : '') + '</span></div>' +
+        '<div class="bar-track"><div class="bar-fill present" style="width:'+pPct+'%; background:'+barColor+';"></div>' +
         '<div class="bar-fill absent" style="width:'+(100-pPct)+'%"></div></div></div>';
     });
     html += '</div>';
@@ -729,14 +933,14 @@
 
   function donutSVG(present, absent){
     var total = present + absent;
-    var size = 120, r = 50, c = size/2, cwidth = 16;
+    var size = 140, r = 58, c = size/2, cwidth = 18;
     var circumference = 2 * Math.PI * r;
     var presentLen = total ? (present/total)*circumference : 0;
     return '<svg viewBox="0 0 '+size+' '+size+'">' +
       '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="var(--absent-bg)" stroke-width="'+cwidth+'"/>' +
       '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="var(--present)" stroke-width="'+cwidth+'" ' +
         'stroke-dasharray="'+presentLen+' '+circumference+'" stroke-linecap="round" transform="rotate(-90 '+c+' '+c+')"/>' +
-      '<text x="'+c+'" y="'+(c+2)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="600" font-size="18" fill="var(--ink)">' +
+      '<text x="'+c+'" y="'+(c+3)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-weight="600" font-size="21" fill="var(--ink)">' +
         Math.round(total?present/total*100:0) + '%</text>' +
     '</svg>';
   }
@@ -745,42 +949,43 @@
     var out = '<div class="heatstrip">';
     for(var i=13;i>=0;i--){
       var d = addDays(todayStr(), -i);
-      var p=0, t=0;
+      var p=0, t=0, hasC=false;
       state.subjects.forEach(function(s){
         var rec = state.records[s.id] || {};
-        if(rec[d]){ t++; if(rec[d]==='present') p++; }
+        var v = rec[d];
+        if(v==='present'||v==='absent'){ t++; if(v==='present') p++; }
+        else if(v==='cancelled') hasC=true;
       });
-      var cls = 'none-data';
-      if(t>0){
-        if(p===t) cls='full'; else if(p===0) cls='none'; else cls='partial';
-      }
-      out += '<div class="heat-cell '+(t>0?cls:'')+'" title="'+d+'"></div>';
+      var cls = '';
+      if(t>0){ cls = p===t?'full':(p===0?'none':'partial'); }
+      else if(hasC){ cls = 'holiday'; }
+      out += '<div class="heat-cell '+cls+'" title="'+d+'"></div>';
     }
     out += '</div>';
     return out;
   }
 
   function computeStreaks(){
-    // a "good" day = every subject marked that day was present (and at least one class marked)
+    // a "good" day = every subject marked present/absent that day was present (holidays and no-data days are skipped)
     var current=0, best=0, run=0;
     var checkDates = [];
     for(var i=0;i<120;i++){ checkDates.push(addDays(todayStr(), -i)); }
-    // best streak scanning oldest to newest
     checkDates.slice().reverse().forEach(function(day){
       var p=0,t=0;
       state.subjects.forEach(function(s){
         var rec = state.records[s.id] || {};
-        if(rec[day]){ t++; if(rec[day]==='present') p++; }
+        var v = rec[day];
+        if(v==='present'||v==='absent'){ t++; if(v==='present') p++; }
       });
       if(t>0 && p===t){ run++; if(run>best) best=run; } else if(t>0){ run=0; }
     });
-    // current streak: walk backwards from today while days are full-present (skip days with no data)
     for(var j=0;j<checkDates.length;j++){
       var day = checkDates[j];
       var p2=0,t2=0;
       state.subjects.forEach(function(s){
         var rec = state.records[s.id] || {};
-        if(rec[day]){ t2++; if(rec[day]==='present') p2++; }
+        var v = rec[day];
+        if(v==='present'||v==='absent'){ t2++; if(v==='present') p2++; }
       });
       if(t2===0) continue;
       if(p2===t2) current++; else break;
@@ -806,11 +1011,18 @@
       try{
         var data = JSON.parse(ev.target.result);
         if(!data.subjects || !data.records) throw new Error('bad file');
-        if(!confirm('This will replace all current data with the backup file. Continue?')) return;
-        state = { subjects: data.subjects, records: data.records };
-        render();
-        toast('Backup restored');
-        saveState();
+        confirmModal(
+          'Restore backup?',
+          'This will replace all current data with the backup file.',
+          'Restore',
+          function(){
+            state = { subjects: data.subjects, records: data.records };
+            render();
+            toast('Backup restored');
+            saveState();
+          },
+          true
+        );
       }catch(err){
         toast('That file doesn\u2019t look like a Roll Call backup');
       }
